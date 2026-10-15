@@ -83,7 +83,9 @@ Terraform stack.
 ### 01-cluster
 
 Resources: `digitalocean_vpc`, `digitalocean_kubernetes_cluster` with one default node
-pool. Version comes from `data "digitalocean_kubernetes_versions"` filtered to a
+pool. The cluster carries the tag `donotdelete`: the DigitalOcean account used for the
+demo runs a nightly job that deletes every Kubernetes cluster without that tag, and the
+tag is also harmless on any other account. Version comes from `data "digitalocean_kubernetes_versions"` filtered to a
 configurable minor prefix, so the pin lives in one variable. Variables: `cluster_name`
 (default `dac-demo`), `region` (default `nyc3`), `node_size` (default `s-4vcpu-8gb`),
 `node_count` (default 3), `kubernetes_version_prefix`. Outputs: cluster name and id.
@@ -154,11 +156,14 @@ installed by wave 0 apps, and retry covers the window where a CRD is not yet ser
 
 ### Monitoring config
 
-One `AlertmanagerConfig` labelled `dac: alerts` in `monitoring`. Route: alerts whose
-labels identify the runner workload go to receiver `slack`, everything else to the
-default. The receiver reads the webhook URL from secret `alertmanager-slack`. The exact
-label Kubescape attaches is confirmed against the node-agent Alertmanager exporter
-during implementation and recorded in the values file comment.
+One `AlertmanagerConfig` labelled `dac: alerts` in `monitoring`. Route: alerts with
+`alertname = KubescapeRuleViolated` and `namespace = arc-runners` go to receiver
+`slack`, everything else to the default. The receiver reads the webhook URL from secret
+`alertmanager-slack`. Label names come from the node-agent Alertmanager exporter
+(`pkg/exporters/alert_manager.go`): it sets `alertname`, `rule_name`, `rule_id`,
+`namespace`, `pod_name`, `container_name`, `workload_uid`, `node_name` and `severity`.
+It does not forward pod labels, so the route keys on the namespace, which is why the
+runner scale set has a namespace of its own.
 
 ### Rules
 
