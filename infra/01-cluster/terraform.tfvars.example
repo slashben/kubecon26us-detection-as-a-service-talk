@@ -1,0 +1,2 @@
+cluster_name = "dac-demo"
+region       = "nyc3"

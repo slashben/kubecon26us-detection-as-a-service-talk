@@ -1,0 +1,7 @@
+# Copy to backend.hcl and edit. backend.hcl is gitignored.
+# Credentials: export AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY set to a Spaces key pair.
+# The Spaces region is independent of the cluster region.
+bucket = "my-dac-demo-tfstate"
+endpoints = {
+  s3 = "https://ams3.digitaloceanspaces.com"
+}
