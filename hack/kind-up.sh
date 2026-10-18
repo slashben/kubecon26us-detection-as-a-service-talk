@@ -7,6 +7,8 @@
 #   REPO_URL                     default: this repo's origin URL (https form)
 #   REPO_REVISION                default: current branch
 #   REPO_PRIVATE                 default: true; "false" skips the Argo CD repo credential
+#   ARGOCD_REPO_TOKEN            optional: a GitHub token for the Argo CD repo credential
+#                                instead of the GitHub App (local validation shortcut)
 #   GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, GITHUB_APP_PRIVATE_KEY_FILE
 #                                default: placeholders; arc-runners stays degraded without real ones
 #   SLACK_WEBHOOK_URL            default: placeholder
@@ -53,7 +55,17 @@ kubectl -n monitoring create secret generic alertmanager-slack \
   --from-literal=webhook-url="$SLACK_WEBHOOK_URL" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-if [[ "$REPO_PRIVATE" == "true" ]]; then
+if [[ "$REPO_PRIVATE" == "true" && -n "${ARGOCD_REPO_TOKEN:-}" ]]; then
+  # Local shortcut: a personal access token instead of the GitHub App.
+  kubectl -n argocd create secret generic repo-talk \
+    --from-literal=type=git \
+    --from-literal=url="$REPO_URL" \
+    --from-literal=username=x-access-token \
+    --from-literal=password="$ARGOCD_REPO_TOKEN" \
+    --dry-run=client -o yaml \
+    | kubectl label --local -f - argocd.argoproj.io/secret-type=repository -o yaml \
+    | kubectl apply -f -
+elif [[ "$REPO_PRIVATE" == "true" ]]; then
   kubectl -n argocd create secret generic repo-talk \
     --from-literal=type=git \
     --from-literal=url="$REPO_URL" \
