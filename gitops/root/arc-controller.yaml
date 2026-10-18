@@ -29,6 +29,8 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # The ARC CRDs exceed the client-side apply annotation limit.
+      - ServerSideApply=true
     retry:
       limit: 5
       backoff:
