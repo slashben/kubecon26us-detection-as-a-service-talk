@@ -10,4 +10,5 @@ Synced by the Argo CD root Application that `infra/02-bootstrap` creates.
 | `rules/` | Kubescape `Rules` objects: the detection-as-code part of the demo. |
 
 Chart versions are pinned in `root/*.yaml`. The repo URL appears in `root/*.yaml` and
-`values/arc-runners.yaml`; forks change it there (see `docs/demo-setup.md`).
+`values/arc-runners.yaml`; forks change it there (see `docs/demo-setup.md`). The child
+Applications track `main`; only the root Application's revision is configurable.

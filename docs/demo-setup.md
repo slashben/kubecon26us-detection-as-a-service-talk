@@ -16,6 +16,10 @@ Create one Spaces bucket (any region) in the DigitalOcean console or with the AW
 
     aws --endpoint-url https://ams3.digitaloceanspaces.com s3 mb s3://my-dac-demo-tfstate
 
+Keep the bucket private and treat the Spaces key pair like the GitHub App key: the
+`02-bootstrap` state holds secrets (the GitHub App private key, the Slack webhook and the
+Argo CD repo credential) in plain text.
+
 Then in both `infra/01-cluster` and `infra/02-bootstrap`:
 
     cp backend.hcl.example backend.hcl   # edit bucket and endpoint
@@ -73,11 +77,24 @@ runner pod appears in `arc-runners`, runs the job and disappears.
     ./hack/kind-up.sh
     kubectl -n argocd get applications -w
 
+Argo CD pulls the GitOps tree from GitHub, not from your working tree, so push first.
+While the repo is private, give the script a credential or it stops before creating
+anything:
+
+    ARGOCD_REPO_TOKEN=<github token with repo read> ./hack/kind-up.sh   # local shortcut
+    # or the GitHub App: GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID, GITHUB_APP_PRIVATE_KEY_FILE
+    # or REPO_PRIVATE=false once the repo is public
+
 Expect `kubescape`, `monitoring`, `arc-controller`, `monitoring-config` and `rules` to
 reach `Synced / Healthy` within about 5 minutes. `arc-runners` needs real GitHub App
-credentials; pass them as `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` and
-`GITHUB_APP_PRIVATE_KEY_FILE`. The repo must be reachable by Argo CD: while it is
-private, the same GitHub App needs the Contents permission.
+credentials to become functional; without them Argo CD still shows it Healthy, and the
+ARC controller log shows "no credentials".
+
+The root Application follows `REPO_REVISION` (default: your current branch), but the
+child Applications track `main` (the `targetRevision` in `gitops/root/*.yaml` and the
+`$values` source). To validate a branch that is not on `main` yet, change those
+`targetRevision` values to the branch name on a throwaway branch, push it, and run the
+script with `REPO_REVISION=<that branch>`.
 
 ## Troubleshooting
 

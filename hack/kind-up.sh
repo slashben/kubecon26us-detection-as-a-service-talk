@@ -29,6 +29,17 @@ GITHUB_APP_ID="${GITHUB_APP_ID:-0}"
 GITHUB_APP_INSTALLATION_ID="${GITHUB_APP_INSTALLATION_ID:-0}"
 SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/placeholder/not/configured}"
 
+if [[ "$REPO_PRIVATE" == "true" && -z "${ARGOCD_REPO_TOKEN:-}" && ( "$GITHUB_APP_ID" == "0" || -z "${GITHUB_APP_PRIVATE_KEY_FILE:-}" ) ]]; then
+  cat >&2 <<'MSG'
+kind-up.sh: the repo is private (REPO_PRIVATE=true) but no credential was given, so
+Argo CD could not fetch it. Provide one of:
+  ARGOCD_REPO_TOKEN=<github token with repo read>     (local shortcut)
+  GITHUB_APP_ID + GITHUB_APP_INSTALLATION_ID + GITHUB_APP_PRIVATE_KEY_FILE
+or set REPO_PRIVATE=false once the repository is public.
+MSG
+  exit 2
+fi
+
 if [[ -n "${GITHUB_APP_PRIVATE_KEY_FILE:-}" ]]; then
   key_file="$GITHUB_APP_PRIVATE_KEY_FILE"
 else
