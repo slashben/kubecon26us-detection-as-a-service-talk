@@ -62,4 +62,13 @@ and commit that change to your fork's `main`.
 
 ## Local validation with kind
 
+    ./hack/kind-up.sh
+    kubectl -n argocd get applications -w
+
+Expect `kubescape`, `monitoring`, `arc-controller`, `monitoring-config` and `rules` to
+reach `Synced / Healthy` within about 5 minutes. `arc-runners` needs real GitHub App
+credentials; pass them as `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` and
+`GITHUB_APP_PRIVATE_KEY_FILE`. The repo must be reachable by Argo CD: while it is
+private, the same GitHub App needs the Contents permission.
+
 ## Troubleshooting
