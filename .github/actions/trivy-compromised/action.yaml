@@ -1,0 +1,12 @@
+name: trivy-compromised (simulation)
+description: >-
+  Harmless stand-in for the compromised Trivy action from the TeamPCP advisory.
+  Simulated behaviours are added by the attack-simulation work; this version only
+  prints a marker.
+runs:
+  using: composite
+  steps:
+    - name: Marker
+      shell: bash
+      run: |
+        echo "DAC-SIMULATION placeholder: no simulated behaviour yet"

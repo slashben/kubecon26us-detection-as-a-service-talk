@@ -1,0 +1,4 @@
+# actionlint config: the demo workflows run on the in-cluster ARC scale set.
+self-hosted-runner:
+  labels:
+    - dac-runners
