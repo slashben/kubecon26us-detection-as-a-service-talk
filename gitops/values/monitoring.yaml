@@ -1,0 +1,40 @@
+grafana:
+  enabled: false
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    retention: 24h
+    # Pick up AlertmanagerConfig objects labelled dac=alerts (gitops/monitoring/).
+    alertmanagerConfigSelector:
+      matchLabels:
+        dac: alerts
+    # By default the operator adds a namespace="<config namespace>" matcher to every
+    # AlertmanagerConfig route. Kubescape alerts carry namespace=arc-runners, so that
+    # default would never match. None disables the injected matcher.
+    alertmanagerConfigMatcherStrategy:
+      type: None
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+
+prometheus:
+  prometheusSpec:
+    retention: 24h
+    resources:
+      requests:
+        cpu: 200m
+        memory: 768Mi
+      limits:
+        memory: 2Gi
+
+# Not needed for the demo; saves a node's worth of scraping.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false

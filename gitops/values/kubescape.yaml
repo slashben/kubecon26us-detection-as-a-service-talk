@@ -1,0 +1,17 @@
+clusterName: dac-demo
+
+capabilities:
+  runtimeObservability: enable
+  runtimeDetection: enable
+
+nodeAgent:
+  config:
+    # host:port, no scheme (node-agent pkg/exporters/alert_manager.go).
+    # alertmanager-operated is the headless service the Prometheus operator always creates.
+    alertManagerExporterUrls:
+      - alertmanager-operated.monitoring.svc.cluster.local:9093
+    stdoutExporter: true
+    # Chart default is 1h after the first alert, which hides a second demo run.
+    ruleCooldown:
+      ruleCooldownDuration: 30s
+      ruleCooldownAfterCount: 1

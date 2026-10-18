@@ -1,0 +1,2 @@
+# Chart defaults. File exists so the Application's valueFiles entry resolves.
+replicaCount: 1

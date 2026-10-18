@@ -1,0 +1,32 @@
+githubConfigUrl: https://github.com/slashben/kubecon26us-detection-as-a-service-talk
+# Pre-created by infra/02-bootstrap (or hack/kind-up.sh); never in Git.
+githubConfigSecret: dac-github-app
+
+runnerScaleSetName: dac-runners
+minRunners: 0
+maxRunners: 3
+
+# Argo CD renders with `helm template`, which cannot `lookup` the controller's
+# service account, so name it explicitly: <controller release>-gha-rs-controller.
+controllerServiceAccount:
+  namespace: arc-systems
+  name: arc-controller-gha-rs-controller
+
+# No containerMode: the job runs inside the runner container. No Docker daemon,
+# no Kubernetes hook. Trivy's fs scan needs neither.
+template:
+  metadata:
+    labels:
+      app.kubernetes.io/name: dac-runner
+      dac.kubescape.io/role: ci-runner
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:2.338.0
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            memory: 2Gi
