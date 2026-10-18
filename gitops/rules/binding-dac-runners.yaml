@@ -1,0 +1,18 @@
+# Binds the demo rules to the CI runner pods. Without a RuntimeRuleAlertBinding
+# node-agent evaluates no rules at all (the chart's default binding is off).
+#
+# Rules are selected by tag, not by name: every entry in dac-rules.yaml that carries
+# the tag "dac" applies to the runners. Add the tag to a new rule and it is bound.
+apiVersion: kubescape.io/v1
+kind: RuntimeRuleAlertBinding
+metadata:
+  name: dac-runners-all-rules
+spec:
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: arc-runners
+  podSelector:
+    matchLabels:
+      dac.kubescape.io/role: ci-runner
+  rules:
+    - ruleTags: ["dac"]

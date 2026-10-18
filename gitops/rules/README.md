@@ -7,3 +7,7 @@ is the full upstream set). `profileDependency` 2 means the rule needs no applica
 profile, which matters for ephemeral runner pods.
 
 `dac-rules.yaml` holds the demo's rules. It starts with one disabled placeholder.
+
+`binding-dac-runners.yaml` is the `RuntimeRuleAlertBinding` that makes node-agent evaluate
+rules at all: it selects pods labelled `dac.kubescape.io/role=ci-runner` in `arc-runners`
+and binds every rule tagged `dac`. Tag each demo rule with `dac`.
