@@ -38,9 +38,14 @@ that gets from "CVE published" to "rule deployed" in under an hour.
 | Path | Contents |
 |---|---|
 | [`docs/talk-plan.md`](docs/talk-plan.md) | Talk narrative, timeline and open decisions |
+| [`docs/demo-setup.md`](docs/demo-setup.md) | How to bring up the demo cluster |
+| [`infra/`](infra/) | Terraform: `01-cluster` (DOKS) and `02-bootstrap` (Argo CD, secrets, root app) |
+| [`gitops/`](gitops/) | Argo CD Applications, Helm values, Alertmanager routing, Kubescape `Rules` |
+| [`.github/`](.github/) | Trivy workflows on the in-cluster runners and the harmless simulated-compromise action |
+| [`hack/`](hack/) | kind scripts for local validation |
 
-More to come: demo cluster setup, Rule CRDs, GitOps manifests and attack simulation
-scripts.
+Setup is documented in [`docs/demo-setup.md`](docs/demo-setup.md). Still to come: the
+detection rules and the attack simulation.
 
 ## Related projects
 
