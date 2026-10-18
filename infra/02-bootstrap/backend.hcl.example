@@ -1,0 +1,6 @@
+# Copy to backend.hcl and edit. backend.hcl is gitignored.
+# Use the same bucket as 01-cluster; the state key differs.
+bucket = "my-dac-demo-tfstate"
+endpoints = {
+  s3 = "https://ams3.digitaloceanspaces.com"
+}

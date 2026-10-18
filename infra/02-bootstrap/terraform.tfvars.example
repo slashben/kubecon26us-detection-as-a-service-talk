@@ -1,0 +1,14 @@
+cluster_name = "dac-demo"
+repo_url     = "https://github.com/<you>/kubecon26us-detection-as-a-service-talk.git"
+repo_private = true
+
+github_app_id              = "123456"
+github_app_installation_id = "12345678"
+github_app_private_key     = <<EOF
+-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----
+EOF
+
+# Optional
+slack_webhook_url = ""
