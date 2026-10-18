@@ -1,0 +1,28 @@
+# Detection rules for the demo. Edited on stage: add a rule, open a PR, merge,
+# Argo CD syncs it, node-agent picks it up without a restart.
+apiVersion: kubescape.io/v1
+kind: Rules
+metadata:
+  name: dac-rules
+  namespace: kubescape
+spec:
+  rules:
+    - name: "Placeholder (disabled)"
+      enabled: false
+      id: "DAC-0000"
+      description: "Keeps this object non-empty until the demo rules are added."
+      expressions:
+        message: "'placeholder'"
+        uniqueId: "'placeholder'"
+        ruleExpression:
+          - eventType: "exec"
+            expression: "false"
+      profileDependency: 2
+      severity: 1
+      supportPolicy: false
+      isTriggerAlert: false
+      # Required by the CRD schema even for a disabled placeholder.
+      mitreTactic: "TA0002"
+      mitreTechnique: "T1059"
+      tags:
+        - "placeholder"

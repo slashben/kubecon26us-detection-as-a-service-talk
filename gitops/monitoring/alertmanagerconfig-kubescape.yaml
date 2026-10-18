@@ -1,0 +1,37 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: dac-kubescape
+  namespace: monitoring
+  labels:
+    dac: alerts
+spec:
+  route:
+    receiver: default
+    groupBy: ["alertname", "rule_id", "pod_name"]
+    groupWait: 5s
+    groupInterval: 30s
+    repeatInterval: 1h
+    routes:
+      # Labels set by node-agent's Alertmanager exporter. Pod labels are not
+      # forwarded, so the route keys on the runner namespace.
+      - receiver: slack
+        matchers:
+          - name: alertname
+            value: KubescapeRuleViolated
+          - name: namespace
+            value: arc-runners
+  receivers:
+    - name: default
+    - name: slack
+      slackConfigs:
+        - apiURL:
+            name: alertmanager-slack
+            key: webhook-url
+          sendResolved: false
+          title: '{{ .CommonLabels.rule_name }} in {{ .CommonLabels.namespace }}/{{ .CommonLabels.pod_name }}'
+          text: |-
+            {{ range .Alerts }}{{ .Annotations.summary }}
+            rule: {{ .Labels.rule_id }}  severity: {{ .Labels.severity }}  node: {{ .Labels.node_name }}
+            process: {{ .Labels.comm }} (pid {{ .Labels.pid }}, parent {{ .Labels.pcomm }})
+            {{ end }}
