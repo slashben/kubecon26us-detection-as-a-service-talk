@@ -21,7 +21,7 @@ argocd_chart_version="${ARGOCD_CHART_VERSION:-10.10.5}"
 argocd_apps_chart_version="${ARGOCD_APPS_CHART_VERSION:-2.0.6}"
 
 origin="$(git -C "$repo_root" remote get-url origin)"
-origin_https="$(sed -E 's#^git@github.com:#https://github.com/#; s#\.git$##' <<<"$origin").git"
+origin_https="$(sed -E 's#^git@github.com:#https://github.com/#; s#^ssh://git@github.com/#https://github.com/#; s#\.git$##' <<<"$origin").git"
 REPO_URL="${REPO_URL:-$origin_https}"
 REPO_REVISION="${REPO_REVISION:-$(git -C "$repo_root" rev-parse --abbrev-ref HEAD)}"
 REPO_PRIVATE="${REPO_PRIVATE:-true}"
