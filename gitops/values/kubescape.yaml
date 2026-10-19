@@ -9,6 +9,12 @@ nodeAgent:
   # DNS query rule forwarding (the dnsQuery eventType), so a C2/typosquat lookup
   # that never resolves (NXDOMAIN) still fires DAC-0001. Chart 1.40.5 and 1.41.0
   # both still pin v0.3.219. Revisit when the chart adopts a newer node-agent.
+  #
+  # WARNING: if this ever drops below v0.3.278 (a chart bump that resets the tag,
+  # a cluster recreate, or a mutable-tag change), the dnsQuery path goes dormant
+  # SILENTLY: the rule still loads and DAC-0001 still fires on resolving C2
+  # domains, so the demo looks fine while the headline NXDOMAIN typosquat stops
+  # firing. The pre-demo sanity check in docs/demo-setup.md guards against this.
   image:
     tag: v0.3.278
   config:

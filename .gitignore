@@ -17,6 +17,9 @@ kubeconfig*
 *.pem
 *.key
 
+# Superpowers SDD scratch (ledger, briefs, review packages)
+.superpowers/
+
 # Editors
 .vscode/
 .idea/

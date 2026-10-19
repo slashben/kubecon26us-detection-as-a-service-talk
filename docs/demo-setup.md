@@ -72,6 +72,26 @@ and commit that change to your fork's `main`.
 Trigger a job from the GitHub UI: Actions → "Trivy scan (clean)" → Run workflow. A
 runner pod appears in `arc-runners`, runs the job and disappears.
 
+## Pre-demo sanity check (detection path)
+
+Run this before relying on the live demo. The headline C2 detection (DAC-0001 on a
+domain that never resolves) depends on node-agent DNS query forwarding, which needs
+node-agent >= v0.3.278 (the chart still ships v0.3.219; `gitops/values/kubescape.yaml`
+pins the newer image). If node-agent silently dropped back to the chart default, the
+clean and resolving-domain paths still work, so only this check catches it.
+
+    # 1. node-agent image must be >= v0.3.278 on every node
+    kubectl -n kubescape get pods -l app.kubernetes.io/component=node-agent \
+      -o jsonpath='{range .items[*]}{.spec.containers[0].image}{"\n"}{end}'
+
+    # 2. Run the compromised workflow (Actions -> "Trivy scan (simulated compromise)"),
+    #    then confirm DAC-0001 fired for the NON-resolving typosquat:
+    kubectl -n kubescape logs ds/node-agent --since=3m \
+      | grep -o 'scan.aquasecurtiy.org'
+
+If step 2 prints nothing while the compromised run otherwise alerts, node-agent is too
+old for `dnsQuery`: check its image tag against the pin above.
+
 ## Local validation with kind
 
     ./hack/kind-up.sh

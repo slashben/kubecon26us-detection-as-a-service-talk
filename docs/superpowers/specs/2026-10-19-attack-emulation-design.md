@@ -73,7 +73,7 @@ One shell step, every line labeled `DAC-SIMULATION`, performs:
 |---|---|---|
 | Four C2 / payload domains | A DNS query for each name | `dns`, `event.name` = the domain |
 | `~/.config/systemd/user/sysmon.py` | Write that file under `$HOME` | `open`, `event.path` ends in `/systemd/user/sysmon.py` |
-| `tpcp.tar.gz` | `tar` a dummy file into `/tmp/tpcp.tar.gz` | `open`, `event.path` ends in `tpcp.tar.gz` |
+| `tpcp.tar.gz` | `tar` a dummy file into `$HOME/tpcp.tar.gz` | `exec` (tar argv) or `open`, name ends in `tpcp.tar.gz` |
 | `sysmon.py` process + `45.148.10.212` | Exec `sysmon.py` with the C2 domain and IP as argv | `exec`, `event.comm`/`event.args` carry the markers |
 
 The C2 IP appears only as a process argument, never as a connection destination,
@@ -92,7 +92,7 @@ rule, so no binding change is needed.
 |---|---|---|---|
 | C2 beacon | `dns` | `event.name` is one of the four C2 domains (trailing-dot tolerant) | TA0011 / T1071.004 |
 | Persistence backdoor | `open` | `event.path` ends in `/systemd/user/sysmon.py` | TA0003 / T1543.002 |
-| Exfil archive | `open` | `event.path` ends in `tpcp.tar.gz` | TA0009 / T1560.001 |
+| Exfil archive | `open` + `exec` | `event.path` ends in `/tpcp.tar.gz`, or argv carries `tpcp.tar.gz` (tar) | TA0009 / T1560.001 |
 | Backdoor process | `exec` | `event.comm` is `sysmon.py`, or argv carries a C2 domain or `45.148.10.212` | TA0002 / T1059.006 |
 
 Each rule sets `isTriggerAlert: true`, a `message` and `uniqueId` expression, and
