@@ -44,9 +44,10 @@ runs:
         SH
         chmod +x "${HOME}/.config/systemd/user/sysmon.py"
 
-        # 3) Exfil archive (DAC-0003): tar a dummy file into tpcp.tar.gz.
-        echo "DAC-SIMULATION collected data" > /tmp/dac-collected.txt
-        tar czf /tmp/tpcp.tar.gz -C /tmp dac-collected.txt
+        # 3) Exfil archive (DAC-0003): tar a dummy file into tpcp.tar.gz under
+        #    $HOME (the workspace), where the sensor reports the full open path.
+        echo "DAC-SIMULATION collected data" > "${HOME}/dac-collected.txt"
+        tar czf "${HOME}/tpcp.tar.gz" -C "${HOME}" dac-collected.txt
 
         # 4) Backdoor process (DAC-0004): run sysmon.py with the C2 IP and domain
         #    as arguments. This invocation carries the IoC tokens (the sysmon.py
