@@ -1,12 +1,60 @@
 name: trivy-compromised (simulation)
 description: >-
   Harmless stand-in for the compromised Trivy action from the TeamPCP advisory.
-  Simulated behaviours are added by the attack-simulation work; this version only
-  prints a marker.
+  Runs a real Trivy scan, then emulates the advisory's indicators of compromise
+  (DNS beacon, persistence backdoor, exfil archive, backdoor process) so the
+  Kubescape demo rules fire. No real C2 contact: the C2 hosts and IP appear only
+  as DNS queries and process arguments, and every write lands in the ephemeral
+  runner pod, which is destroyed seconds later.
 runs:
   using: composite
   steps:
-    - name: Marker
+    - name: Trivy filesystem scan
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      with:
+        scan-type: fs
+        scan-ref: .
+        severity: HIGH,CRITICAL
+        exit-code: "0"
+
+    - name: DAC-SIMULATION emulate TeamPCP IoCs
       shell: bash
       run: |
-        echo "DAC-SIMULATION placeholder: no simulated behaviour yet"
+        set -u
+        echo "DAC-SIMULATION: emulating TeamPCP IoCs (harmless; no C2 contact)"
+
+        # 1) C2 beacon (DAC-0001): one DNS query per C2/payload domain via the
+        #    in-cluster resolver (resolv.conf -> CoreDNS). getent is part of glibc,
+        #    always present. The query emits the dns event; no connection is ever
+        #    made to any of these hosts.
+        for d in scan.aquasecurtiy.org hackmoltrepeat.com \
+                 tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io \
+                 plug-tab-protective-relay.trycloudflare.com; do
+          echo "DAC-SIMULATION: DNS lookup ${d}"
+          getent hosts "${d}" || true
+        done
+
+        # 2) Persistence backdoor (DAC-0002): write the systemd-user backdoor path.
+        #    A shell redirect, so no process argv carries the path at this point.
+        mkdir -p "${HOME}/.config/systemd/user"
+        cat > "${HOME}/.config/systemd/user/sysmon.py" <<'SH'
+        #!/bin/sh
+        # DAC-SIMULATION backdoor stand-in; prints a marker and exits.
+        echo "DAC-SIMULATION sysmon $*"
+        SH
+        chmod +x "${HOME}/.config/systemd/user/sysmon.py"
+
+        # 3) Exfil archive (DAC-0003): tar a dummy file into tpcp.tar.gz under
+        #    $HOME (the workspace), where the sensor reports the full open path.
+        echo "DAC-SIMULATION collected data" > "${HOME}/dac-collected.txt"
+        tar czf "${HOME}/tpcp.tar.gz" -C "${HOME}" dac-collected.txt
+
+        # 4) Backdoor process (DAC-0004): run sysmon.py with the C2 IP and domain
+        #    as arguments. This invocation carries the IoC tokens (the sysmon.py
+        #    path and 45.148.10.212) in its argv, which is what the exec rule matches.
+        "${HOME}/.config/systemd/user/sysmon.py" --c2 45.148.10.212 --host scan.aquasecurtiy.org || true
+
+        # Keep the container alive briefly so node-agent processes the events
+        # before the ephemeral runner pod is torn down.
+        sleep 10
+        echo "DAC-SIMULATION: done"

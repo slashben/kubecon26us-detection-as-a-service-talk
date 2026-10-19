@@ -1,5 +1,10 @@
 # Detection rules for the demo. Edited on stage: add a rule, open a PR, merge,
 # Argo CD syncs it, node-agent picks it up without a restart.
+#
+# All four match TeamPCP IoCs on literal event fields, with profileDependency: 2
+# so they fire on the first run without a learned baseline (runner pods are
+# ephemeral and never complete a profile). Tagged "dac" so the existing
+# RuntimeRuleAlertBinding evaluates them on the CI runner pods.
 apiVersion: kubescape.io/v1
 kind: Rules
 metadata:
@@ -7,23 +12,102 @@ metadata:
   namespace: kubescape
 spec:
   rules:
-    - name: "Placeholder (disabled)"
-      enabled: false
-      id: "DAC-0000"
-      description: "Keeps this object non-empty until the demo rules are added."
+    - name: "TeamPCP C2 beacon (DNS)"
+      enabled: true
+      id: "DAC-0001"
+      description: "A DNS query for one of the TeamPCP C2 or payload domains."
       expressions:
-        message: "'placeholder'"
-        uniqueId: "'placeholder'"
+        message: "'C2 beacon: DNS lookup of ' + event.name + ' from ' + event.containerName"
+        uniqueId: "event.name"
         ruleExpression:
-          - eventType: "exec"
-            expression: "false"
+          # Answered responses (domains that resolve). Matched on every agent.
+          - eventType: "dns"
+            expression: >
+              event.name in ['scan.aquasecurtiy.org', 'scan.aquasecurtiy.org.',
+              'hackmoltrepeat.com', 'hackmoltrepeat.com.',
+              'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io', 'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io.',
+              'plug-tab-protective-relay.trycloudflare.com', 'plug-tab-protective-relay.trycloudflare.com.']
+          # Queries that never resolve (NXDOMAIN) - a C2/typosquat lookup still
+          # fires. Needs dnsRuleForwarding enabled (gitops/values/kubescape.yaml).
+          - eventType: "dnsQuery"
+            expression: >
+              event.qr == 'Q' && event.name in ['scan.aquasecurtiy.org', 'scan.aquasecurtiy.org.',
+              'hackmoltrepeat.com', 'hackmoltrepeat.com.',
+              'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io', 'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io.',
+              'plug-tab-protective-relay.trycloudflare.com', 'plug-tab-protective-relay.trycloudflare.com.']
       profileDependency: 2
-      severity: 1
+      severity: 10
       supportPolicy: false
-      isTriggerAlert: false
-      # Required by the CRD schema even for a disabled placeholder.
-      mitreTactic: "TA0002"
-      mitreTechnique: "T1059"
+      isTriggerAlert: true
+      mitreTactic: "TA0011"
+      mitreTechnique: "T1071.004"
       tags:
         - "dac"
-        - "placeholder"
+        - "c2"
+        - "dns"
+    - name: "TeamPCP persistence backdoor written"
+      enabled: true
+      id: "DAC-0002"
+      description: "A write to the systemd user backdoor path ~/.config/systemd/user/sysmon.py."
+      expressions:
+        message: "'Persistence backdoor written: ' + event.path + ' by ' + event.comm"
+        uniqueId: "event.path"
+        ruleExpression:
+          - eventType: "open"
+            expression: "event.path.endsWith('/systemd/user/sysmon.py')"
+      profileDependency: 2
+      severity: 8
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0003"
+      mitreTechnique: "T1543.002"
+      tags:
+        - "dac"
+        - "persistence"
+    - name: "TeamPCP exfiltration archive created"
+      enabled: true
+      id: "DAC-0003"
+      description: "Creation of the tpcp.tar.gz exfiltration archive."
+      expressions:
+        message: "'Exfiltration archive tpcp.tar.gz handled by ' + event.comm"
+        uniqueId: "event.comm"
+        ruleExpression:
+          # A process opening the archive (e.g. a shell redirect). openat only.
+          - eventType: "open"
+            expression: "event.path.endsWith('/tpcp.tar.gz')"
+          # A process creating the archive by name (e.g. tar, which writes via
+          # openat2 and so is missed by the open tracer). argv carries the name.
+          - eventType: "exec"
+            expression: "event.args.exists(a, string(a).endsWith('tpcp.tar.gz'))"
+      profileDependency: 2
+      severity: 8
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0009"
+      mitreTechnique: "T1560.001"
+      tags:
+        - "dac"
+        - "exfiltration"
+    - name: "TeamPCP backdoor process executed"
+      enabled: true
+      id: "DAC-0004"
+      description: "Execution of the sysmon.py backdoor, carrying the C2 IP as an argument."
+      expressions:
+        message: "'Backdoor process executed: ' + event.comm + ' (pid ' + string(event.pid) + ')'"
+        uniqueId: "event.comm + '_' + string(event.pid)"
+        ruleExpression:
+          # Match the running backdoor by comm (sysmon.py), or any process whose
+          # argv carries the C2 IP. Deliberately NOT matching the sysmon.py path
+          # in argv, so helpers like chmod that merely touch the file do not alert.
+          - eventType: "exec"
+            expression: "event.comm == 'sysmon.py' || event.args.exists(a, string(a) == '45.148.10.212')"
+      profileDependency: 2
+      severity: 10
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0002"
+      mitreTechnique: "T1059.006"
+      tags:
+        - "dac"
+        - "backdoor"
+        - "exec"
