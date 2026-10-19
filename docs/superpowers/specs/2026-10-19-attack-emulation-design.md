@@ -110,10 +110,9 @@ later.
 2. All writes go to the ephemeral runner pod's own filesystem (`$HOME`, `/tmp`),
    destroyed with the pod seconds later. No persistence actually survives.
 3. No real malware runs. `sysmon.py` is a stand-in that prints a marker.
-4. The DNS query is issued so that it does not leave the cluster where possible;
-   if runtime testing shows the sensor does not capture an in-cluster query, the
-   fallback is a normal resolution, which is DNS only and carries no payload. The
-   choice is validated against the live sensor during implementation.
+4. The DNS query is issued against an in-cluster resolver so it does not leave
+   the cluster. The sensor captures in-cluster queries (confirmed), so no real
+   resolution of the C2 domains is needed.
 
 ## Demo flow
 
@@ -142,8 +141,6 @@ later.
 
 ## Open questions
 
-- Whether the eBPF DNS tracer captures an in-cluster (loopback) DNS query, which
-  decides the exact DNS emulation method. Resolved by testing against the live
-  sensor, with the documented fallback.
 - Whether `event.comm` for a shebang script is the script name or the
-  interpreter; the `exec` rule matches both `event.comm` and argv to be robust.
+  interpreter. Not yet known; to be tested against the live sensor. The `exec`
+  rule matches both `event.comm` and argv so it fires either way.
