@@ -5,6 +5,12 @@ capabilities:
   runtimeDetection: enable
 
 nodeAgent:
+  # Override the chart's node-agent (v0.3.219) with the first release that ships
+  # DNS query rule forwarding (the dnsQuery eventType), so a C2/typosquat lookup
+  # that never resolves (NXDOMAIN) still fires DAC-0001. Chart 1.40.5 and 1.41.0
+  # both still pin v0.3.219. Revisit when the chart adopts a newer node-agent.
+  image:
+    tag: v0.3.278
   config:
     # host:port, no scheme (node-agent pkg/exporters/alert_manager.go).
     # alertmanager-operated is the headless service the Prometheus operator always creates.
