@@ -110,9 +110,10 @@ later.
 2. All writes go to the ephemeral runner pod's own filesystem (`$HOME`, `/tmp`),
    destroyed with the pod seconds later. No persistence actually survives.
 3. No real malware runs. `sysmon.py` is a stand-in that prints a marker.
-4. The DNS query is issued against an in-cluster resolver so it does not leave
-   the cluster. The sensor captures in-cluster queries (confirmed), so no real
-   resolution of the C2 domains is needed.
+4. The DNS query is sent to the in-cluster resolver (CoreDNS), where the sensor
+   captures it. CoreDNS may forward the name upstream to resolve it; that is DNS
+   name resolution only. No TCP/HTTP connection is ever made to any C2 host or IP
+   (invariant 1 holds).
 
 ## Demo flow
 
@@ -139,8 +140,21 @@ later.
 - Optional later extension: a `tpcp-docs` directory write detected by an `open`
   rule, if a fifth indicator is wanted.
 
-## Open questions
+## Resolved during implementation (live pre-check on dac-demo)
 
-- Whether `event.comm` for a shebang script is the script name or the
-  interpreter. Not yet known; to be tested against the live sensor. The `exec`
-  rule matches both `event.comm` and argv so it fires either way.
+- **`event.comm` for a shebang script is the script name** (`sysmon.py`), with
+  the interpreter at `event.exepath` (`/usr/bin/dash`). DAC-0004 matches on
+  `event.comm == 'sysmon.py'`.
+- **Non-resolving C2 lookups need DNS query forwarding.** node-agent forwards
+  only answered DNS responses to rules by default, so a C2/typosquat lookup that
+  returns NXDOMAIN (e.g. `scan.aquasecurtiy.org`) is invisible to a `dns` rule.
+  DAC-0001 gained a `dnsQuery` expression and the cluster enables
+  `dnsRuleForwarding`. This first ships in node-agent **v0.3.278**; chart 1.40.5
+  (and 1.41.0) still pin v0.3.219, so the demo pins the newer node-agent image.
+- **`tar` writes via `openat2`,** which the open tracer does not hook, so the
+  exfil archive never raised an `open` event. DAC-0003 also matches the `tar`
+  exec by argv (`tpcp.tar.gz`); the `open` expression still covers a shell
+  redirect. The emulation writes the archive under `$HOME`.
+- **DAC-0004 was narrowed** to `event.comm`/the C2 IP in argv, not the
+  `sysmon.py` path in argv, so `chmod` touching the file no longer raises a
+  misleading "backdoor process: chmod" alert.

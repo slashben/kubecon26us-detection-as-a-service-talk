@@ -13,6 +13,13 @@ application profile needed) and are tagged `dac`, so the binding evaluates them
 on the CI runner pods. They match the TeamPCP IoCs emulated by
 `.github/actions/trivy-compromised`.
 
+DAC-0001 matches both answered DNS responses (`dns`) and unanswered queries
+(`dnsQuery`), so a C2/typosquat lookup that returns NXDOMAIN still fires. The
+`dnsQuery` path needs `dnsRuleForwarding` enabled (see
+`gitops/values/kubescape.yaml`) and node-agent >= v0.3.278; on older agents the
+expression loads but never matches, and the `dns` path still covers domains that
+resolve.
+
 `upstream-rules.yaml` is the upstream rule library (`kubescape-rules`), vendored verbatim
 with its source commit in the header. Enabled/disabled flags are upstream's.
 
