@@ -9,8 +9,10 @@
 Give the demo its payload: a simulated compromised CI run that performs harmless
 stand-ins for the TeamPCP attack's indicators of compromise, and a set of
 Kubescape runtime rules that detect them and raise alerts. Running the clean
-workflow produces no alerts; running the compromised workflow fires every demo
-rule and lights up Alertmanager.
+workflow produces no `dac` alerts; running the compromised workflow fires every
+demo rule and lights up Alertmanager. (Upstream R1001 "drifted process" fires on
+both runs, because Trivy is downloaded at run time; see "Resolved during
+implementation".)
 
 ## What we are emulating
 
@@ -117,7 +119,8 @@ later.
 
 ## Demo flow
 
-1. Run `scan.yaml` (clean). A runner pod appears, Trivy scans, pod exits. No alerts.
+1. Run `scan.yaml` (clean). A runner pod appears, Trivy scans, pod exits. No `dac`
+   alerts (only the upstream drift alert for the downloaded Trivy binary).
 2. Run `scan-compromised.yaml`. A runner pod appears, Trivy scans, the emulated
    steps run, pod exits. Within the rule cooldown the four `dac` rules fire and
    appear in Alertmanager, routed on `namespace=arc-runners`.
@@ -129,8 +132,8 @@ later.
 
 - `kubeconform` the `Rules` object against the CRD schema.
 - `actionlint` the composite action and workflow.
-- Live: run both workflows on the `dac-demo` cluster, confirm clean is silent and
-  compromised fires all four rules in Alertmanager.
+- Live: run both workflows on the `dac-demo` cluster, confirm clean raises no `dac`
+  alerts and compromised fires all four rules in Alertmanager.
 
 ## Out of scope
 
@@ -158,3 +161,13 @@ later.
 - **DAC-0004 was narrowed** to `event.comm`/the C2 IP in argv, not the
   `sysmon.py` path in argv, so `chmod` touching the file no longer raises a
   misleading "backdoor process: chmod" alert.
+- **The clean run is not alert-free.** Upstream R1001 "Drifted process executed"
+  fires on both workflows because `trivy-action` downloads the Trivy binary at
+  run time. Kept and narrated (a run-time binary download is the TeamPCP
+  surface) rather than unbound or disabled.
+- **DAC-0002 fires on whichever open the sensor sees.** The shell's heredoc
+  write (`comm=bash`) was captured in most pre-check runs but lost in the final
+  run, most likely in the open storm of the preceding Trivy scan; the
+  interpreter's read when `sysmon.py` executes (`comm=sysmon.py`) was always
+  seen. The rule matches any open of the path, not only writes, and its message
+  says "accessed", not "written".

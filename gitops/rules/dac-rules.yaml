@@ -45,14 +45,17 @@ spec:
         - "dac"
         - "c2"
         - "dns"
-    - name: "TeamPCP persistence backdoor written"
+    - name: "TeamPCP persistence backdoor accessed"
       enabled: true
       id: "DAC-0002"
-      description: "A write to the systemd user backdoor path ~/.config/systemd/user/sysmon.py."
+      description: "Any open of the systemd user backdoor path ~/.config/systemd/user/sysmon.py (write or execution)."
       expressions:
-        message: "'Persistence backdoor written: ' + event.path + ' by ' + event.comm"
+        message: "'Persistence backdoor file accessed: ' + event.path + ' by ' + event.comm"
         uniqueId: "event.path"
         ruleExpression:
+          # Any open, not only writes: the shell's write is sometimes lost in the
+          # open storm of the preceding Trivy scan, while the interpreter's read
+          # when the backdoor runs is always seen. Breadth is what keeps this firing.
           - eventType: "open"
             expression: "event.path.endsWith('/systemd/user/sysmon.py')"
       profileDependency: 2

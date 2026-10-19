@@ -7,7 +7,7 @@ is the full upstream set). `profileDependency` 2 means the rule needs no applica
 profile, which matters for ephemeral runner pods.
 
 `dac-rules.yaml` holds the demo's four detection rules (ids DAC-0001..DAC-0004):
-a C2 DNS beacon, a systemd-user persistence backdoor write, an exfiltration
+a C2 DNS beacon, a systemd-user persistence backdoor file access, an exfiltration
 archive, and the backdoor process execution. All use profileDependency 2 (no
 application profile needed) and are tagged `dac`, so the binding evaluates them
 on the CI runner pods. They match the TeamPCP IoCs emulated by

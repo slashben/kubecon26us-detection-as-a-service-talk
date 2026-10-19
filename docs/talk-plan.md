@@ -53,3 +53,8 @@ The scenario-1 (IoCs → CEL rule) path is built and tested end to end.
   since chart 1.40.5 still ships v0.3.219.
 - **Verified:** the clean run raises no `dac` alerts; the compromised run fires all four rules
   (DAC-0001 on all four C2 domains) into Alertmanager, routed on `namespace=arc-runners`.
+- **The clean run is not silent, and that is part of the story.** Upstream R1001 "Drifted
+  process executed" fires on *both* runs: `trivy-action` downloads the Trivy binary at
+  runtime, so a process not in the image executes. Narrate it rather than hide it: a CI
+  action that pulls a binary at run time is exactly the surface TeamPCP exploited. Clean
+  run = 1 alert (drift), compromised run = drift + the four `dac` rules.
