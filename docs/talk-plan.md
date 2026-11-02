@@ -54,7 +54,8 @@ The scenario-1 (IoCs → CEL rule) path is built and tested end to end.
   runs the same scan plus `.github/actions/trivy-compromised`, a composite action that
   harmlessly emulates the TeamPCP indicators of compromise (no real C2 contact; writes only
   to the ephemeral runner pod). Both run on the ARC `dac-runners` self-hosted runners.
-- **Four rules** in `gitops/rules/dac-rules.yaml`, tagged `dac`, `profileDependency: 2`
+- **Four rules**, authored on camera and merged into `gitops/rules/` (reference copy in
+  `docs/reference-rules/dac-rules.yaml`), tagged `dac`, `profileDependency: 2`
   (fire on the first run, no learned baseline): DAC-0001 C2 DNS beacon, DAC-0002 systemd-user
   persistence backdoor (`sysmon.py`), DAC-0003 exfil archive (`tpcp.tar.gz`), DAC-0004 the
   backdoor process execution.
