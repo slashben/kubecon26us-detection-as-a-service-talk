@@ -31,7 +31,7 @@ spec:
           sendResolved: false
           title: '{{ .CommonLabels.rule_name }} in {{ .CommonLabels.namespace }}/{{ .CommonLabels.pod_name }}'
           text: |-
-            {{ range .Alerts }}{{ .Annotations.summary }}
+            {{ range .Alerts }}{{ .Annotations.message }}
             rule: {{ .Labels.rule_id }}  severity: {{ .Labels.severity }}  node: {{ .Labels.node_name }}
             process: {{ .Labels.comm }} (pid {{ .Labels.pid }}, parent {{ .Labels.pcomm }})
             {{ end }}
