@@ -1,0 +1,201 @@
+# Detection rules for the TeamPCP Trivy supply-chain compromise, written from the
+# indicators of compromise in
+# https://www.armosec.io/blog/trivy-supply-chain-attack-ci-cd-security-lessons/
+#
+# All rules are profileDependency 2 (no baseline needed: the CI runner pods are
+# ephemeral) and tagged `dac`, which is what binding-dac-runners.yaml selects.
+#
+# Not covered at runtime: the commit hash and GPG key ID are only visible if a
+# process names them on its command line (DAC-0006); verify pinned action SHAs and
+# release signatures in the workflow/pipeline instead.
+apiVersion: kubescape.io/v1
+kind: Rules
+metadata:
+  name: dac-rules
+  namespace: kubescape
+  annotations:
+    kubescape.io/namespace: kubescape
+  labels:
+    app: kubescape
+spec:
+  rules:
+    - name: "TeamPCP C2 domain resolved"
+      enabled: true
+      id: "DAC-0001"
+      description: >-
+        Detects DNS resolution of the TeamPCP command and control domains from the Trivy
+        supply-chain advisory: the typosquatted scan.aquasecurtiy.org, the payload host
+        hackmoltrepeat.com, the ICP canister and the Cloudflare Tunnel fallback. The
+        dnsQuery expression catches names that never resolve (NXDOMAIN typosquats, dead
+        C2); it is gated on the query so the error response does not alert twice.
+        The C2 IP address is covered by DAC-0005.
+      expressions:
+        message: "'TeamPCP C2 domain lookup: ' + event.name + ' by ' + event.comm + ' in ' + event.containerName"
+        uniqueId: "event.comm + '_' + event.name"
+        ruleExpression:
+          - eventType: "dns"
+            expression: >-
+              event.name in ['scan.aquasecurtiy.org', 'scan.aquasecurtiy.org.',
+              'hackmoltrepeat.com', 'hackmoltrepeat.com.',
+              'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io', 'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io.',
+              'plug-tab-protective-relay.trycloudflare.com', 'plug-tab-protective-relay.trycloudflare.com.']
+          - eventType: "dnsQuery"
+            expression: >-
+              event.qr == 'Q' &&
+              event.name in ['scan.aquasecurtiy.org', 'scan.aquasecurtiy.org.',
+              'hackmoltrepeat.com', 'hackmoltrepeat.com.',
+              'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io', 'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io.',
+              'plug-tab-protective-relay.trycloudflare.com', 'plug-tab-protective-relay.trycloudflare.com.']
+      profileDependency: 2
+      severity: 10
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0011"
+      mitreTechnique: "T1071.004"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "dns"
+        - "c2"
+
+    - name: "TeamPCP persistence backdoor file accessed"
+      enabled: true
+      id: "DAC-0002"
+      description: >-
+        Detects any open of ~/.config/systemd/user/sysmon.py, the path the TeamPCP
+        payload uses to persist a backdoor as a systemd user unit. Matches any open, not
+        only writes: the file may be written through a shell redirect (no argv names it)
+        and the later read on execution is reliably seen even if the write was lost.
+      expressions:
+        message: "'TeamPCP persistence backdoor file accessed: ' + event.path + ' by ' + event.comm + ' in ' + event.containerName"
+        uniqueId: "event.comm + '_' + event.path"
+        ruleExpression:
+          - eventType: "open"
+            expression: "event.path.endsWith('/.config/systemd/user/sysmon.py')"
+      profileDependency: 2
+      severity: 9
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0003"
+      mitreTechnique: "T1543.002"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "persistence"
+        - "open"
+
+    - name: "TeamPCP exfiltration staging"
+      enabled: true
+      id: "DAC-0003"
+      description: >-
+        Detects the TeamPCP exfiltration archive tpcp.tar.gz being created or read, and
+        git operations against a tpcp-docs repository, the fallback exfiltration channel.
+        The archive is matched on open and on exec because tar uses openat2, which the
+        open tracer does not see; the exec expression carries the file name in argv.
+      expressions:
+        message: "'TeamPCP exfiltration staging (tpcp.tar.gz / tpcp-docs) by ' + event.comm + ' in ' + event.containerName"
+        uniqueId: "event.comm"
+        ruleExpression:
+          - eventType: "open"
+            expression: "event.path.endsWith('/tpcp.tar.gz')"
+          - eventType: "exec"
+            expression: "event.args.exists(a, string(a).endsWith('tpcp.tar.gz') || string(a).contains('tpcp-docs'))"
+      profileDependency: 2
+      severity: 9
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0010"
+      mitreTechnique: "T1560.001"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "exfiltration"
+        - "open"
+        - "exec"
+
+    - name: "TeamPCP backdoor process executed"
+      enabled: true
+      id: "DAC-0004"
+      description: >-
+        Detects the TeamPCP sysmon.py backdoor running, or any process launched with the
+        C2 address 45.148.10.212 or a TeamPCP C2 domain on its command line. Matches the
+        executed comm and distinctive arguments rather than the file path, so helpers
+        that only touch the backdoor file (chmod, cat) do not alert; DAC-0002 covers those.
+      expressions:
+        message: "'TeamPCP backdoor process: ' + event.comm + ' ' + event.args.join(' ') + ' (PID ' + string(event.pid) + ', parent ' + event.pcomm + ') in ' + event.containerName"
+        uniqueId: "event.comm + '_' + event.exepath"
+        ruleExpression:
+          - eventType: "exec"
+            expression: >-
+              event.comm == 'sysmon.py' ||
+              event.args.exists(a, string(a) in ['45.148.10.212', 'scan.aquasecurtiy.org',
+              'hackmoltrepeat.com', 'tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io',
+              'plug-tab-protective-relay.trycloudflare.com'] ||
+              string(a).contains('://45.148.10.212') || string(a).contains('://scan.aquasecurtiy.org') ||
+              string(a).contains('://hackmoltrepeat.com') || string(a).contains('://tdtqy-oyaaa-aaaae-af2dq-cai.raw.icp0.io') ||
+              string(a).contains('://plug-tab-protective-relay.trycloudflare.com'))
+      profileDependency: 2
+      severity: 10
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0002"
+      mitreTechnique: "T1059.004"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "backdoor"
+        - "exec"
+
+    - name: "TeamPCP C2 address connected"
+      enabled: true
+      id: "DAC-0005"
+      description: >-
+        Detects an outbound connection to 45.148.10.212, the TeamPCP command and control
+        address from the Trivy supply-chain advisory. Complements DAC-0001, which covers
+        the C2 domains at DNS level; a payload that hardcodes the IP never queries DNS.
+      expressions:
+        message: "'TeamPCP C2 connection to 45.148.10.212:' + string(event.dstPort) + ' by ' + event.comm + ' in ' + event.containerName"
+        uniqueId: "event.comm + '_' + string(event.dstPort)"
+        ruleExpression:
+          - eventType: "network"
+            expression: "event.pktType == 'OUTGOING' && event.dstAddr == '45.148.10.212'"
+      profileDependency: 2
+      severity: 10
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0011"
+      mitreTechnique: "T1071.001"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "network"
+        - "c2"
+
+    - name: "TeamPCP poisoned Trivy artefact referenced"
+      enabled: true
+      id: "DAC-0006"
+      description: >-
+        Detects a process referencing the poisoned trivy workflow commit 1885610c or the
+        compromised GPG signing key E9D0A3616276FA6C on its command line, for example a
+        git checkout of the commit or a gpg import/verify with the key. These indicators
+        are not otherwise observable at runtime; pin and verify action SHAs and release
+        signatures in the pipeline as the primary control.
+      expressions:
+        message: "'TeamPCP poisoned artefact referenced: ' + event.comm + ' ' + event.args.join(' ') + ' in ' + event.containerName"
+        uniqueId: "event.comm + '_' + event.args.join(' ')"
+        ruleExpression:
+          - eventType: "exec"
+            expression: >-
+              event.args.exists(a, string(a).contains('1885610c') ||
+              string(a).contains('E9D0A3616276FA6C') || string(a).contains('e9d0a3616276fa6c'))
+      profileDependency: 2
+      severity: 7
+      supportPolicy: false
+      isTriggerAlert: true
+      mitreTactic: "TA0001"
+      mitreTechnique: "T1195.002"
+      tags:
+        - "dac"
+        - "teampcp"
+        - "supply-chain"
+        - "exec"
