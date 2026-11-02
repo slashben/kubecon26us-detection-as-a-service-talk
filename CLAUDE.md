@@ -46,3 +46,19 @@ clone exists, use it, otherwise refer to GitHub.
   engine can see, verify it against the node-agent source, not memory.
 - Talk copy (slides, abstract-style text) should follow `docs/talk-plan.md`.
   Point out where it differs instead of quietly rewriting it.
+
+## Demo status (as of 2026-11-02)
+
+The scenario-1 demo (IoCs → CEL rules) is built, live and verified; details in
+[docs/talk-plan.md](docs/talk-plan.md) "Implemented demo" and
+[docs/demo-setup.md](docs/demo-setup.md) "Pre-demo sanity check".
+
+- `scan.yaml` (clean) and `scan-compromised.yaml` (harmless TeamPCP emulation via
+  `.github/actions/trivy-compromised`) run on the ARC `dac-runners` scale set.
+- `gitops/rules/dac-rules.yaml` holds DAC-0001..0004. Clean run = only the upstream
+  R1001 drift alert (narrated, not hidden); compromised = drift + all four `dac` rules.
+- node-agent is pinned to v0.3.278 in `gitops/values/kubescape.yaml` for `dnsQuery`
+  forwarding. Older agents silently lose the NXDOMAIN typosquat detection.
+- Both speakers' segments are recorded clips, on separate clusters (this repo's cluster
+  for the rule path; the co-speaker's clusters for the SBOB profile path, Flux-managed).
+- Before publishing: scrub `docs/superpowers/` of internal references; it still has them.

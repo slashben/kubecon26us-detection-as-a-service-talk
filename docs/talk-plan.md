@@ -27,9 +27,21 @@ One continuous demo of the loop: **notify → author → test → PR → deploy 
 **Two scenarios:** (1) IoCs published → write a CEL rule; (2) no IoCs → rely on
 anomaly detection against application profiles (SBOB).
 
-**Open decisions** (ask the speakers before assuming an answer):
-- SBOB profiles: full stage-2 path vs. one-slide aside.
-- Live vs. recorded vs. hybrid demo.
+**Decided (2026-11-02, both speakers):**
+- Both demo segments are **recorded clips** on the slides, not live. Ben's clips should be
+  visual (PR merge, Argo CD sync, alert arriving), not terminal-only.
+- **Separate clusters.** The rule path (this repo) stays on its Argo CD cluster; the SBOB
+  profile path runs on Constanze's two deliberately different clusters (Flux-managed) to
+  show how kernel/k8s/CNI/metal-vs-VM shift profile-based detection. Her blind spots are
+  stated, not hidden. Her files land in this repo once cleaned up (currently in
+  `k8sstormcenter/bob` PR 246).
+
+**Open decisions:**
+- Consolidate on one node-agent version? Possible; only the NXDOMAIN typosquat beat needs
+  >= v0.3.278. Constanze's call.
+- Whether a php2shell detection joins the rule set (raised by Constanze, unanswered).
+- Alertmanager → Slack is still a placeholder webhook; recording needs either a real webhook
+  or the Alertmanager UI as the alert visual.
 
 **Tech still in flight:** review/cleanup of the CEL rules; the signature feature
 (demo-ready, not merge-ready).
